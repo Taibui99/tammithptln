@@ -2,6 +2,7 @@
 // Content script (isolated world): bơm page.js vào MAIN world mỗi lần mở tammi.vn.
 // Tắt tự chạy: mở Console trang Tammi, gõ localStorage.tdd_auto="0" rồi reload.
 try {
+  console.log("[tdd] inject thấy trang", location.href, "| auto =", localStorage.getItem("tdd_auto"));
   if (localStorage.getItem("tdd_auto") !== "0") {
     const s = document.createElement("script");
     s.src = chrome.runtime.getURL("page.js");
