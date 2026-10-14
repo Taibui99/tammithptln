@@ -1,0 +1,32 @@
+# Render blueprint — worker quét Tammi mỗi giờ (free tier + UptimeRobot ping /health)
+services:
+  - type: web
+    name: tammi-hourly-scanner
+    runtime: node
+    plan: free
+    # Clone bridge unofficial (không đóng gói SDK của Viettel vào repo)
+    buildCommand: >-
+      node --version &&
+      (test -d scanner/lib-bridge ||
+        (git clone --depth 1 https://github.com/cuongdev/hermes-tammi-plugin.git /tmp/bridge-tmp &&
+         mkdir -p scanner/lib-bridge &&
+         cp /tmp/bridge-tmp/bridge/*.js scanner/lib-bridge/ &&
+         rm -rf /tmp/bridge-tmp)) &&
+      npm --prefix scanner install --omit=dev
+    startCommand: node scanner/server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
+      - key: TAMMI_DATA_DIR
+        value: /tmp/.hermes-tammi
+      - key: TAMMI_BRIDGE_DIR
+        value: scanner/lib-bridge
+      - key: SCAN_FILTER
+        value: chi đoàn
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: ADMIN_KEY
+        generateValue: true

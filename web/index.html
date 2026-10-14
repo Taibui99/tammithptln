@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Điểm danh tương tác Tammi — THPT Lộc Ninh</title>
+<style>
+  body{font-family:system-ui,sans-serif;background:#0d1117;color:#e6edf3;margin:0;padding:16px}
+  h1{font-size:20px} .sub{color:#8b949e;font-size:13px}
+  .cfg,.card{background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px;margin:12px 0}
+  input,button{padding:6px 10px;border-radius:6px;border:1px solid #30363d;background:#0d1117;color:#e6edf3}
+  button{cursor:pointer;background:#238636;border-color:#238636;font-weight:600}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{border-bottom:1px solid #30363d;padding:8px;text-align:left}
+  .bar{height:10px;background:#30363d;border-radius:5px;overflow:hidden;min-width:120px}
+  .bar>div{height:100%} .ok{background:#3fb950} .warn{background:#d29922} .bad{background:#f85149}
+  .tabs button{background:#161b22;margin-right:6px} .tabs button.on{background:#1f6feb;border-color:#1f6feb}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<h1>◈ CHECK TAMMI <span style="color:#f85149">·</span> <span style="color:#58a6ff">THPT LỘC NINH</span></h1>
+<div class="sub">Dashboard 0đ: Vercel + Supabase · quét mỗi giờ bằng worker Render</div>
+
+<div class="cfg">
+  <b>Cấu hình Supabase</b> (lưu ở trình duyệt này) ·
+  URL <input id="surl" size="30" placeholder="https://xxx.supabase.co">
+  anon key <input id="skey" size="20" placeholder="eyJ...">
+  Ngày <input id="sdate" type="date"> <button onclick="saveCfg();load()">Xem</button>
+  <span id="hb" class="sub"></span>
+</div>
+
+<div class="tabs">
+  <button id="t0" class="on" onclick="tab(0)">Tổng quan</button>
+  <button id="t1" onclick="tab(1)">Sĩ số lớp</button>
+  <button id="t2" onclick="tab(2)">Danh sách trừ</button>
+</div>
+
+<div id="p0" class="card"><table>
+  <thead><tr><th>Lớp</th><th>Sĩ số</th><th>Đã TT (mới nhất)</th><th>Tỉ lệ</th><th>Cập nhật</th></tr></thead>
+  <tbody id="rows"><tr><td colspan="5">Nhập cấu hình rồi bấm Xem…</td></tr></tbody>
+</table></div>
+
+<div id="p1" class="card" style="display:none">
+  <div class="sub">Sửa sĩ số rồi bấm Lưu từng dòng. Tử số = unique thả tim đã trừ exclude.</div>
+  <div id="cls"></div>
+</div>
+
+<div id="p2" class="card" style="display:none">
+  <div class="sub">Thêm người không đếm (thầy cô, acc phát tin). Để trống lớp = áp dụng toàn trường.</div>
+  <div id="ex"></div>
+  <p>Lớp <select id="excls"></select>
+  user_id <input id="exuid" size="12" placeholder="zegoId (khuyên dùng)">
+  hoặc tên chứa <input id="exname" size="18" placeholder="TRƯƠNG KHẮC NAM">
+  lý do <input id="exreason" size="14"> <button onclick="addEx()">Thêm</button></p>
+</div>
+
+<script>
+let db=null;
+function cfg(){return{url:localStorage.tammi_url||"",key:localStorage.tammi_key||""}}
+function saveCfg(){localStorage.tammi_url=surl.value.trim();localStorage.tammi_key=skey.value.trim();init()}
+function init(){const c=cfg();surl.value=c.url;skey.value=c.key;
+  if(!sdate.value)sdate.value=new Date().toISOString().slice(0,10);
+  if(c.url&&c.key)db=supabase.createClient(c.url,c.key);load()}
+function tab(i){[0,1,2].forEach(k=>{document.getElementById("t"+k).className=k===i?"on":"";document.getElementById("p"+k).style.display=k===i?"":"none"})}
+function pctCls(p){return p==null?"":p>=70?"ok":p>=50?"warn":"bad"}
+async function load(){
+  if(!db)return;
+  const d=sdate.value;
+  const {data:cls}=await db.from("classes").select("*").order("class_name");
+  const {data:sn}=await db.from("snapshots_hourly").select("*").eq("date",d).order("hour",{ascending:false});
+  const last={};(sn||[]).forEach(s=>{if(!last[s.class_id])last[s.class_id]=s});
+  const {data:hb}=await db.from("heartbeat").select("*").order("checked_at",{ascending:false}).limit(1).maybeSingle();
+  document.getElementById("hb").textContent=hb?`nhịp tim: ${hb.status} lúc ${new Date(hb.checked_at).toLocaleString("vi-VN")}`:"chưa có nhịp tim";
+  document.getElementById("rows").innerHTML=(cls||[]).map(c=>{
+    const s=last[c.id];const n=s?s.interacted_count:0,t=c.total_students||0;
+    const p=t>0?Math.round(n/t*1000)/10:null;
+    return `<tr><td>${c.class_name}</td><td>${t}</td><td>${s?n+" (giờ "+s.hour+"h)":"—"}</td>
+    <td>${p==null?"—":`<div class="bar"><div class="${pctCls(p)}" style="width:${Math.min(p,100)}%"></div></div> ${p}%`}</td>
+    <td class="sub">${s?new Date(s.created_at).toLocaleString("vi-VN"):"—"}</td></tr>`}).join("")||"<tr><td colspan=5>Chưa có lớp</td></tr>";
+  document.getElementById("cls").innerHTML=(cls||[]).map(c=>
+    `<p>${c.class_name} <input id="n_${c.id}" type="number" value="${c.total_students||0}" style="width:70px"> <button onclick="saveN('${c.id}')">Lưu</button></p>`).join("");
+  document.getElementById("excls").innerHTML=`<option value="">(toàn trường)</option>`+(cls||[]).map(c=>`<option value="${c.id}">${c.class_name}</option>`).join("");
+  const {data:ex}=await db.from("excluded_users").select("*,classes(class_name)").order("created_at",{ascending:false}).limit(100);
+  document.getElementById("ex").innerHTML=(ex||[]).map(e=>
+    `<p>${e.classes?e.classes.class_name:"(toàn trường)"} · ${e.user_id||""} ${e.name_match||""} <span class="sub">${e.reason||""}</span> <button onclick="delEx('${e.id}')">Xoá</button></p>`).join("")||"Chưa có";
+}
+async function saveN(id){const v=Number(document.getElementById("n_"+id).value||0);
+  await db.from("classes").update({total_students:v}).eq("id",id);load()}
+async function addEx(){await db.from("excluded_users").insert({class_id:excls.value||null,user_id:exuid.value.trim()||null,name_match:exname.value.trim()||null,reason:exreason.value.trim()||null});exuid.value=exname.value=exreason.value="";load()}
+async function delEx(id){await db.from("excluded_users").delete().eq("id",id);load()}
+init();
+</script>
+</body>
+</html>

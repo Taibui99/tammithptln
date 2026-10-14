@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Điểm danh Tammi — THPT Lộc Ninh",
+  "version": "1.0.0",
+  "description": "Quét reaction 39 nhóm chi đoàn ngay trên web Tammi, hiện bảng điểm danh tại chỗ.",
+  "permissions": ["scripting", "activeTab"],
+  "host_permissions": ["https://tammi.vn/*"],
+  "action": {
+    "default_title": "Điểm danh Tammi",
+    "default_popup": "popup.html"
+  }
+}
