@@ -120,27 +120,47 @@
     render(out);
   }
 
+  let FILTER = "all";
+  window.tddFilter = (f) => { FILTER = f; if (LAST.length) render(LAST); };
+
   function render(out) {
     const body = $("tdd-body");
     const good = out.filter((r) => r.ok);
+    const badN = out.length - good.length;
     const sumN = good.reduce((s, r) => s + r.n, 0), sumT = good.reduce((s, r) => s + r.total, 0);
     const pct = sumT ? Math.round(sumN / sumT * 1000) / 10 : 0;
+    const passN = good.filter((r) => r.total && r.n / r.total >= 0.7).length;
     const col = pct >= 70 ? "#1a7f37" : pct >= 50 ? "#9a6700" : BRAND;
-    let h = `<div style="display:flex;gap:10px;align-items:center;margin:6px 0 10px">
-      <div style="font-size:22px;font-weight:800">${sumN}<span style="color:#999;font-size:14px">/${sumT}</span></div>
-      <div style="flex:1;height:12px;background:#f3e2e6;border-radius:1000px;overflow:hidden"><div style="height:100%;width:${Math.min(pct, 100)}%;background:${col}"></div></div>
-      <div style="font-weight:800;color:${col}">${pct}%</div></div>`;
-    h += `<table style="width:100%;border-collapse:collapse"><thead><tr style="color:#888;font-size:12px">
-      <th style="text-align:left;padding:6px 4px">Lớp</th><th style="text-align:right;padding:6px 4px">Đã TT</th><th style="text-align:right;padding:6px 4px">Tỉ lệ</th></tr></thead><tbody>`;
-    out.slice().sort((a, b) => a.name.localeCompare(b.name, "vi")).forEach((r) => {
-      if (!r.ok) { h += `<tr><td style="padding:6px 4px;border-top:1px solid #f2f2f2">${r.name}</td><td colspan="2" style="color:#999">— ${r.note}</td></tr>`; return; }
+    const card = (label, val, sub) => `<div style="flex:1;background:#faf7f8;border:1px solid #f0dfe3;border-radius:14px;padding:8px 10px;min-width:0">
+      <div style="font-size:11px;color:#888">${label}</div>
+      <div style="font-size:20px;font-weight:800">${val}</div>
+      <div style="font-size:11px;color:#888">${sub}</div></div>`;
+    let h = `<div style="display:flex;gap:8px;margin:4px 0 10px">
+      ${card("Đã tương tác", sumN + "<span style='color:#999;font-size:13px'>/" + sumT + "</span>", "tổng 39 nhóm")}
+      ${card("Tỉ lệ chung", `<span style="color:${col}">${pct}%</span>`, "chuẩn đạt ≥ 70%")}
+      ${card("Lớp đạt", passN + "<span style='color:#999;font-size:13px'>/" + good.length + "</span>", badN ? badN + " nhóm lỗi" : "quét sạch")}</div>`;
+    h += `<div style="display:flex;gap:6px;margin-bottom:8px">
+      ${["all", "fail", "pass"].map((f) => `<button onclick="window.tddFilter('${f}')" style="border:0;border-radius:1000px;padding:6px 14px;cursor:pointer;font-weight:700;font-size:12px;${FILTER === f ? `background:${BRAND};color:#fff` : "background:#f3e2e6;color:#7a4a52"}">${f === "all" ? "Tất cả" : f === "fail" ? "Chưa đạt" : "Đã đạt"}</button>`).join("")}</div>`;
+    h += `<div>`;
+    out.slice().sort((a, b) => {
+      const pa = a.ok && a.total ? a.n / a.total : -1, pb = b.ok && b.total ? b.n / b.total : -1;
+      return FILTER === "all" ? a.name.localeCompare(b.name, "vi") : pa - pb;
+    }).forEach((r) => {
+      if (!r.ok) {
+        if (FILTER === "pass") return;
+        h += `<div style="padding:8px 4px;border-top:1px solid #f2f2f2;color:#999">${r.name} — ${r.note}</div>`; return;
+      }
       const p = r.total ? Math.round(r.n / r.total * 1000) / 10 : 0;
+      if (FILTER === "fail" && p >= 70) return;
+      if (FILTER === "pass" && p < 70) return;
       const c = p >= 70 ? "#1a7f37" : p >= 50 ? "#9a6700" : BRAND;
-      h += `<tr><td style="padding:6px 4px;border-top:1px solid #f2f2f2">${r.name}</td>
-        <td style="text-align:right"><b>${r.n}</b><span style="color:#999">/${r.total}</span></td>
-        <td style="text-align:right;font-weight:800;color:${c}">${p}%</td></tr>`;
+      h += `<div style="padding:8px 4px;border-top:1px solid #f2f2f2">
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <b>${r.name}</b><span><b>${r.n}</b><span style="color:#999">/${r.total}</span> · <b style="color:${c}">${p}%</b></span></div>
+        <div style="height:8px;background:#f3e2e6;border-radius:1000px;margin-top:6px;overflow:hidden">
+          <div style="height:100%;width:${Math.min(p, 100)}%;background:${c};border-radius:1000px"></div></div></div>`;
     });
-    body.innerHTML = h + "</tbody></table>";
+    body.innerHTML = h + "</div>";
   }
 
   $("tdd-go").onclick = () => scan().catch((e) => say("Lỗi: " + (e.message || e) + " — thử tải lại trang rồi bấm lại."));
