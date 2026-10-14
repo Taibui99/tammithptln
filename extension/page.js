@@ -1,9 +1,11 @@
-/* NÚT ĐIỂM DANH TAMMI — bản extension (chạy ở page world, thấy window.__zimInstance).
- * File này do popup gọi qua chrome.scripting (world: MAIN). Đừng chạy trực tiếp ở Console.
- * Logic quét + panel style Tammi y hệt bản bookmarklet.
- */
+/* NUT DIEM DANH TAMMI - ban extension (chay o page world). File nay do popup/inject goi. Dung sua tay: sua web/bookmarklet-check.js roi chay node sync-page.js. */
 (function () {
-  if (document.getElementById("tdiemdanh")) { document.getElementById("tdiemdanh").remove(); return; }
+  var l = document.getElementById("tdd-load");
+  if (l) l.remove();
+  var manual = !!window.__tdd_manual;
+  window.__tdd_manual = false;
+  var p = document.getElementById("tdiemdanh");
+  if (p) { p.remove(); if (!manual) return; }
   const BRAND = "#EE0033", INK = "#1d1d1d";
   const css = `font-family:"Sans Flex",system-ui,sans-serif`;
   const root = document.createElement("div");

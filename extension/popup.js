@@ -8,6 +8,7 @@ document.getElementById("go").addEventListener("click", async () => {
       st.textContent = "Hãy mở tab tammi.vn đang login trước đã.";
       return;
     }
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, world: "MAIN", func: () => { window.__tdd_manual = 1; } });
     await chrome.scripting.executeScript({ target: { tabId: tab.id }, world: "MAIN", files: ["page.js"] });
     st.textContent = "Đã chạy — xem panel trên trang Tammi nhé.";
     setTimeout(() => window.close(), 900);
