@@ -131,9 +131,11 @@
   // ---- Loại trừ (lưu ở trình duyệt, không cần server) ----
   function getEx() { try { return JSON.parse(localStorage.tdd_exclude || "[]"); } catch (e) { return []; } }
   function setEx(a) { try { localStorage.tdd_exclude = JSON.stringify(a); } catch (e) {} }
+  // Tên "X (bạn)" là cách Tammi ghi tên của chính acc đang login — chuẩn hoá để đếm cho đúng
+  function normName(s) { return String(s || "").replace(/\s*\(b[aạ]n\)\s*$/i, "").trim(); }
   function isEx(id, nm) {
-    const U = String(nm || "").toUpperCase();
-    return getEx().some((e) => (e.id && e.id === id) || (e.name && U.includes(String(e.name).toUpperCase())));
+    const U = normName(nm).toUpperCase();
+    return getEx().some((e) => (e.id && e.id === id) || (e.name && U.includes(normName(e.name).toUpperCase())));
   }
   window.tddExAdd = (id, nm) => {
     try {
@@ -172,7 +174,7 @@
     return z;
   }
   function senderOf(m) {
-    try { const e = m.extendedData ? JSON.parse(m.extendedData) : {}; if (e.senderName) return e.senderName; } catch (x) {}
+    try { const e = m.extendedData ? JSON.parse(m.extendedData) : {}; if (e.senderName) return normName(e.senderName); } catch (x) {}
     return m.senderUserID || "?";
   }
   async function reactors(z, target, rt) {
@@ -225,18 +227,27 @@
         for (const rt of (rts.length ? rts : ["71"])) all.push(...await reactors(z, t, rt));
         all = [...new Set(all)];
         const members = [], names = {};
+        var selfId = null; // acc đang quét (tên có đuôi " (bạn)") — tự loại, không phải học sinh
         try {
           let n = 0;
           for (let p = 0; p < 5; p++) {
             const m = await z.queryGroupMemberList(g.conversationID, { count: 100, nextFlag: n });
             for (const u of (m.groupMemberList || m.memberList || m.userList || [])) {
               const id = u.userID || u.userId || u.id;
-              const nm = u.userName || u.nickname || id;
-              if (id) { members.push({ id, name: nm }); names[id] = nm; }
+              const raw = u.userName || u.nickname || id;
+              const nm = normName(raw) || id;
+              if (id) {
+                members.push({ id, name: nm }); names[id] = nm;
+                if (selfId === null && /\(b[aạ]n\)\s*$/i.test(String(raw))) selfId = id;
+              }
             }
             if (!m.nextFlag) break; n = m.nextFlag;
           }
         } catch (e) {}
+        if (selfId) {
+          const a = getEx();
+          if (!a.some((e) => e.id === selfId)) { a.push({ id: selfId, name: names[selfId] }); setEx(a); }
+        }
         const rc = (t.reactions || []).reduce((s, r) => s + (r.totalCount || 0), 0);
         var rangeIds = null, rangeN = 0;
         if (MODE_USED === "range") {
@@ -244,10 +255,15 @@
           rangeN = cands.length;
           var set = new Set(all);
           if (t.senderUserID) set.add(t.senderUserID);
-          cands.forEach((m) => {
-            if (m.senderUserID) set.add(m.senderUserID);
-            for (const r2 of (m.reactions || [])) for (const u of (r2.userList || [])) { const id = u.userID || u.userId; if (id) set.add(id); }
-          });
+          // Tim 1 tin bất kỳ trong đợt là tính — query full từng tin sau (không đọc mẫu cache)
+          for (const cm of cands) {
+            if (cm.senderUserID) set.add(cm.senderUserID);
+            const crts = [...new Set((cm.reactions || []).map((r) => r.reactionType))];
+            for (const rt of crts) {
+              try { (await reactors(z, cm, rt)).forEach((id) => set.add(id)); } catch (e) {}
+            }
+            for (const r2 of (cm.reactions || [])) for (const u of (r2.userList || [])) { const id = u.userID || u.userId; if (id) set.add(id); }
+          }
           rangeIds = [...set].filter(Boolean);
         }
         out.push({ name: g.conversationName, gid: g.conversationID, ok: true, reactors: all, members, names, rc, msgId: t.messageID, msgTime: t.timestamp, rangeIds, rangeN });
