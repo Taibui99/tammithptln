@@ -281,25 +281,26 @@
 
   function detailHTML(r) {
     const v = netOf(r);
-    const inSet = new Set(v.reaIds);
-    const yes = [], no = [];
-    v.mem.forEach((m) => ((inSet.has(m.id) ? yes : no).push(m)));
-    let h = `<div style="background:#faf7f8;border-radius:12px;padding:8px 10px;margin:2px 0 8px">
-      <div style="font-weight:800;color:#1a7f37;margin:4px 0">✓ TIM TIN NAM (${yes.length})</div>
-      <div>${yes.length ? yes.map(liOf).join("") : "<span style='color:#999'>—</span>"}</div>
-      <div style="font-weight:800;color:${BRAND};margin:8px 0 4px">✗ CHƯA TIM TIN NAM (${no.length})</div>
-      <div>${no.length ? no.map(liOf).join("") : "<span style='color:#999'>—</span>"}</div>`;
+    let yes, no, yesT, noT;
     if (r.rangeIds && MODE_USED === "range") {
       const rset = new Set(r.rangeIds.filter((id) => !isEx(id, r.names[id])));
-      const onlyLater = [...rset].filter((id) => !inSet.has(id)).map((id) => ({ id, name: (r.names || {})[id] || String(id).slice(0, 8) }));
-      const silent = v.mem.filter((m) => !rset.has(m.id));
-      h += `<div style="font-weight:800;color:#b45309;margin:8px 0 4px">◐ TƯƠNG TÁC TIN SAU (${onlyLater.length}) — có tim/gửi tin sau nhưng không tim tin NAM</div>
-        <div>${onlyLater.length ? onlyLater.map(liOf).join("") : "<span style='color:#999'>—</span>"}</div>`;
-      h += `<div style="font-weight:800;color:#5b21b6;margin:8px 0 4px">◈ IM LẶNG CẢ ĐỢT (${silent.length}) — từ tin NAM tới ${r.rangeN || ""} tin sau</div>
-        <div>${silent.length ? silent.map(liOf).join("") : "<span style='color:#999'>—</span>"}</div>`;
+      yes = v.mem.filter((m) => rset.has(m.id));
+      no = v.mem.filter((m) => !rset.has(m.id));
+      yesT = `✓ ĐÃ TƯƠNG TÁC (${yes.length}) — tim/gửi bất kỳ tin nào trong đợt`;
+      noT = `✗ IM LẶNG CẢ ĐỢT (${no.length})`;
+    } else {
+      const inSet = new Set(v.reaIds);
+      yes = []; no = [];
+      v.mem.forEach((m) => ((inSet.has(m.id) ? yes : no).push(m)));
+      yesT = `✓ TIM TIN NAM (${yes.length})`;
+      noT = `✗ CHƯA TIM TIN NAM (${no.length})`;
     }
-    h += `<div style="color:#999;font-size:11px;margin-top:6px">Bấm × ở tên để loại người đó khỏi thống kê.</div></div>`;
-    return h;
+    return `<div style="background:#faf7f8;border-radius:12px;padding:8px 10px;margin:2px 0 8px">
+      <div style="font-weight:800;color:#1a7f37;margin:4px 0">${yesT}</div>
+      <div>${yes.length ? yes.map(liOf).join("") : "<span style='color:#999'>—</span>"}</div>
+      <div style="font-weight:800;color:${BRAND};margin:8px 0 4px">${noT}</div>
+      <div>${no.length ? no.map(liOf).join("") : "<span style='color:#999'>—</span>"}</div>
+      <div style="color:#999;font-size:11px;margin-top:6px">Bấm × ở tên để loại người đó khỏi thống kê.</div></div>`;
   }
 
   function render(out) {
