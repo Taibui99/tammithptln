@@ -291,8 +291,11 @@
       <div>${no.length ? no.map(liOf).join("") : "<span style='color:#999'>—</span>"}</div>`;
     if (r.rangeIds && MODE_USED === "range") {
       const rset = new Set(r.rangeIds.filter((id) => !isEx(id, r.names[id])));
+      const onlyLater = [...rset].filter((id) => !inSet.has(id)).map((id) => ({ id, name: (r.names || {})[id] || String(id).slice(0, 8) }));
       const silent = v.mem.filter((m) => !rset.has(m.id));
-      h += `<div style="font-weight:800;color:#5b21b6;margin:8px 0 4px">◈ IM LẶNG CẢ ĐỢT (${silent.length}) — từ tin NAM tới ${r.rangeN} tin sau</div>
+      h += `<div style="font-weight:800;color:#b45309;margin:8px 0 4px">◐ TƯƠNG TÁC TIN SAU (${onlyLater.length}) — có tim/gửi tin sau nhưng không tim tin NAM</div>
+        <div>${onlyLater.length ? onlyLater.map(liOf).join("") : "<span style='color:#999'>—</span>"}</div>`;
+      h += `<div style="font-weight:800;color:#5b21b6;margin:8px 0 4px">◈ IM LẶNG CẢ ĐỢT (${silent.length}) — từ tin NAM tới ${r.rangeN || ""} tin sau</div>
         <div>${silent.length ? silent.map(liOf).join("") : "<span style='color:#999'>—</span>"}</div>`;
     }
     h += `<div style="color:#999;font-size:11px;margin-top:6px">Bấm × ở tên để loại người đó khỏi thống kê.</div></div>`;
