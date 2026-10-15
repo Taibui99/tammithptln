@@ -16,7 +16,11 @@
   root.innerHTML = `
     <div style="background:${BRAND};color:#fff;padding:12px 16px;font-weight:800;font-size:15px;display:flex;justify-content:space-between;align-items:center">
       <span>◈ ĐIỂM DANH TAMMI · THPT LỘC NINH</span>
-      <button id="tdd-x" style="border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:1000px;width:28px;height:28px;cursor:pointer;font-weight:800">✕</button>
+      <span style="display:flex;gap:6px">
+        <button id="tdd-big" title="Phóng to" style="border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:1000px;width:28px;height:28px;cursor:pointer;font-weight:800">⛶</button>
+        <button id="tdd-set" title="Cài đặt" style="border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:1000px;width:28px;height:28px;cursor:pointer;font-weight:800">⚙</button>
+        <button id="tdd-x" style="border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:1000px;width:28px;height:28px;cursor:pointer;font-weight:800">✕</button>
+      </span>
     </div>
     <div style="padding:12px 16px;border-bottom:1px solid #f0dfe3;font-size:13px">
       <div id="tdd-status" style="margin-bottom:8px">Bấm <b>Quét ngay</b> để điểm danh 39 nhóm chi đoàn.</div>
@@ -32,10 +36,88 @@
           <button id="tdd-push" style="border:0;background:#111;color:#fff;border-radius:1000px;padding:6px 14px;cursor:pointer">Lưu + Đẩy</button>
         </div>
       </details>
+      <div id="tdd-settings" style="display:none;background:#faf7f8;border:1px solid #f0dfe3;border-radius:14px;padding:10px 12px;margin-top:8px;font-size:12px">
+        <b>⚙ CÀI ĐẶT</b>
+        <div style="margin:8px 0">Chế độ chấm:<br>
+          <label><input type="radio" name="tdd-mode" value="react"> Tim tin NAM (nhanh)</label><br>
+          <label><input type="radio" name="tdd-mode" value="range"> Tương tác cả đợt — từ tin NAM tới <input id="tdd-after" type="number" min="1" max="29" value="10" style="width:48px;border:1px solid #ddd;border-radius:8px;padding:2px 6px"> tin sau</label>
+          <div style="color:#888">Cả đợt: ai gửi tin/nhả tim trong đoạn đó đều tính đã tương tác.</div></div>
+        <div style="margin:8px 0"><label><input type="checkbox" id="tdd-auto-cb"> Tự bung panel mỗi lần mở Tammi.vn (extension)</label></div>
+        <div style="margin:8px 0"><b>Loại trừ (<span id="tdd-exn">0</span>)</b> — bấm × ở tên trong chi tiết lớp cũng được
+          <div style="display:flex;gap:6px;margin:6px 0"><input id="tdd-exname" placeholder="Tên hoặc user_id cần loại…" style="flex:1;border:1px solid #ddd;border-radius:1000px;padding:6px 12px">
+          <button id="tdd-exadd" style="border:0;background:#111;color:#fff;border-radius:1000px;padding:6px 14px;cursor:pointer">+ Thêm</button></div>
+          <div id="tdd-exlist"></div></div>
+      </div>
     </div>
     <div id="tdd-body" style="padding:8px 16px;overflow:auto;font-size:13px"></div>`;
   document.body.appendChild(root);
   document.getElementById("tdd-x").onclick = () => root.remove();
+  let BIG = false;
+  document.getElementById("tdd-big").onclick = () => {
+    BIG = !BIG;
+    root.style.width = BIG ? "920px" : "560px";
+    root.style.top = BIG ? "5vh" : "16px";
+    root.style.maxHeight = BIG ? "90vh" : "86vh";
+    if (BIG) { root.style.left = "50%"; root.style.right = "auto"; root.style.transform = "translateX(-50%)"; }
+    else { root.style.left = ""; root.style.right = "16px"; root.style.transform = ""; }
+  };
+  document.getElementById("tdd-set").onclick = () => {
+    const s = document.getElementById("tdd-settings");
+    s.style.display = s.style.display === "none" ? "" : "none";
+  };
+  // mục đang mở (giữ nguyên sau mỗi lần vẽ lại — sửa lỗi bấm × là xẹp)
+  const OPEN = new Set();
+  function paintEx() {
+    try {
+      const a = getEx();
+      const n = document.getElementById("tdd-exn"); if (n) n.textContent = a.length;
+      const box = document.getElementById("tdd-exlist"); if (!box) return;
+      box.innerHTML = a.map((e, i) => `<span style="display:inline-block;background:#eee;border-radius:1000px;padding:3px 6px 3px 10px;margin:2px;font-size:12px">${e.name || e.id} <button onclick="window.tddExDel(${i})" style="border:0;background:#999;color:#fff;border-radius:1000px;width:18px;height:18px;cursor:pointer">×</button></span>`).join("") || "<span style='color:#999'>Chưa loại ai</span>";
+    } catch (e) {}
+  }
+  function liOf(m) {
+    const safe = String(m.name || "").replace(/'/g, "");
+    return `<span style="display:inline-block;background:#f6f0f1;border-radius:1000px;padding:3px 6px 3px 10px;margin:2px;font-size:12px">${m.name} <button onclick="event.stopPropagation();window.tddExAdd('${m.id}','${safe}')" title="Loại người này" style="border:0;background:${BRAND};color:#fff;border-radius:1000px;width:18px;height:18px;cursor:pointer;font-size:11px">×</button></span>`;
+  }
+  function detailHTML(r) {
+    const v = netOf(r);
+    const inSet = new Set(v.reaIds);
+    const yes = [], no = [];
+    v.mem.forEach((m) => ((inSet.has(m.id) ? yes : no).push(m)));
+    let h = `<div style="background:#faf7f8;border-radius:12px;padding:8px 10px;margin:2px 0 8px">
+      <div style="font-weight:800;color:#1a7f37;margin:4px 0">✓ ĐÃ TƯƠNG TÁC (${yes.length})</div>
+      <div>${yes.length ? yes.map(liOf).join("") : "<span style='color:#999'>—</span>"}</div>
+      <div style="font-weight:800;color:${BRAND};margin:8px 0 4px">✗ CHƯA TƯƠNG TÁC (${no.length})</div>
+      <div>${no.length ? no.map(liOf).join("") : "<span style='color:#999'>—</span>"}</div>`;
+    if (r.rangeIds && MODE_USED === "range") {
+      const rset = new Set(r.rangeIds.filter((id) => !isEx(id, r.names[id])));
+      const silent = v.mem.filter((m) => !rset.has(m.id));
+      h += `<div style="font-weight:800;color:#5b21b6;margin:8px 0 4px">◈ IM LẶNG CẢ ĐỢT (${silent.length}) — từ tin NAM tới ${r.rangeN || ""} tin sau</div>
+        <div>${silent.length ? silent.map(liOf).join("") : "<span style='color:#999'>—</span>"}</div>`;
+    }
+    h += `<div style="color:#999;font-size:11px;margin-top:6px">Bấm × ở tên để loại người đó khỏi thống kê.</div></div>`;
+    return h;
+  }
+  // chế độ chấm đang dùng (đọc lúc quét)
+  var MODE_USED = "react";
+  function readMode() {
+    try {
+      const c = document.querySelector('input[name="tdd-mode"]:checked');
+      const md = (c && c.value) || localStorage.tdd_mode || "react";
+      localStorage.tdd_mode = md;
+      const an = Math.max(1, Math.min(29, Number(($("tdd-after") || {}).value || localStorage.tdd_after || 10)));
+      localStorage.tdd_after = an;
+      return { mode: md, after: an };
+    } catch (e) { return { mode: "react", after: 10 }; }
+  }
+  function dispOf(r) {
+    const v = netOf(r);
+    if (MODE_USED === "range" && r.rangeIds) {
+      const ids = r.rangeIds.filter((id) => !isEx(id, r.names[id]));
+      return { n: ids.length, t: v.mem.length, mode: "range" };
+    }
+    return { n: v.n, t: v.t, mode: "react" };
+  }
   try {
     document.getElementById("tdd-url").value = localStorage.tdd_supa_url || "";
     document.getElementById("tdd-key").value = localStorage.tdd_supa_key || "";
@@ -54,20 +136,35 @@
     return getEx().some((e) => (e.id && e.id === id) || (e.name && U.includes(String(e.name).toUpperCase())));
   }
   window.tddExAdd = (id, nm) => {
-    const a = getEx();
-    if (!a.some((e) => e.id === id)) a.push({ id: id || null, name: nm || null });
-    setEx(a); if (LAST.length) render(LAST);
+    try {
+      const a = getEx();
+      if (!a.some((e) => e.id === id)) a.push({ id: id || null, name: nm || null });
+      setEx(a); paintEx(); if (LAST.length) render(LAST);
+    } catch (e) { console.log("[tdd] exadd lỗi:", e.message); }
   };
-  window.tddExDel = (i) => { const a = getEx(); a.splice(i, 1); setEx(a); if (LAST.length) render(LAST); };
+  window.tddExDel = (i) => { try { const a = getEx(); a.splice(i, 1); setEx(a); paintEx(); if (LAST.length) render(LAST); } catch (e) {} };
   window.tddExAddByName = () => {
     const v = ($("tdd-exname") || {}).value;
-    if (v && v.trim()) { const a = getEx(); a.push({ id: null, name: v.trim() }); setEx(a); render(LAST); }
+    if (v && v.trim()) { const a = getEx(); a.push({ id: null, name: v.trim() }); setEx(a); paintEx(); render(LAST); }
   };
   function netOf(r) {
-    const mem = r.members.filter((m) => !isEx(m.id, m.name));
-    const rea = r.reactors.filter((id) => !isEx(id, r.names[id]));
+    const mem = (r.members || []).filter((m) => !isEx(m.id, m.name));
+    const rea = (r.reactors || []).filter((id) => !isEx(id, (r.names || {})[id]));
     return { n: rea.length, t: mem.length, reaIds: rea, mem };
   }
+
+  try {
+    const md = localStorage.tdd_mode || "react";
+    const rr = document.querySelector('input[name="tdd-mode"][value="' + md + '"]');
+    if (rr) rr.checked = true;
+    if ($("tdd-after")) $("tdd-after").value = localStorage.tdd_after || 10;
+    if ($("tdd-auto-cb")) {
+      $("tdd-auto-cb").checked = localStorage.tdd_auto !== "0";
+      $("tdd-auto-cb").onchange = (e) => { try { localStorage.tdd_auto = e.target.checked ? "1" : "0"; } catch (x) {} };
+    }
+    const eb = $("tdd-exadd"); if (eb) eb.onclick = () => window.tddExAddByName();
+    paintEx();
+  } catch (e) {}
 
   function zim() {
     const z = window.__zimInstance || (window.ZIM && window.ZIM.getInstance && window.ZIM.getInstance());
@@ -110,6 +207,9 @@
     const day = new Date(); day.setHours(0, 0, 0, 0);
     const out = [];
     LAST = out; // render dần từng nhóm cho đỡ sốt ruột
+    OPEN.clear();
+    var mm = readMode(); MODE_USED = mm.mode;
+    say(`Chế độ: <b>${MODE_USED === "range" ? "tương tác cả đợt (" + mm.after + " tin sau tin NAM)" : "tim tin NAM"}</b> — đang lấy danh sách nhóm…`);
     let i = 0;
     for (const g of groups) {
       i++;
@@ -138,7 +238,19 @@
           }
         } catch (e) {}
         const rc = (t.reactions || []).reduce((s, r) => s + (r.totalCount || 0), 0);
-        out.push({ name: g.conversationName, gid: g.conversationID, ok: true, reactors: all, members, names, rc, msgId: t.messageID, msgTime: t.timestamp });
+        var rangeIds = null, rangeN = 0;
+        if (MODE_USED === "range") {
+          var cands = list.filter((m) => m.timestamp > t.timestamp).sort((a, b) => b.timestamp - a.timestamp).slice(0, mm.after);
+          rangeN = cands.length;
+          var set = new Set(all);
+          if (t.senderUserID) set.add(t.senderUserID);
+          cands.forEach((m) => {
+            if (m.senderUserID) set.add(m.senderUserID);
+            for (const r2 of (m.reactions || [])) for (const u of (r2.userList || [])) { const id = u.userID || u.userId; if (id) set.add(id); }
+          });
+          rangeIds = [...set].filter(Boolean);
+        }
+        out.push({ name: g.conversationName, gid: g.conversationID, ok: true, reactors: all, members, names, rc, msgId: t.messageID, msgTime: t.timestamp, rangeIds, rangeN });
       } catch (e) { out.push({ name: g.conversationName, ok: false, note: e.message || "lỗi" }); }
       render(out);
       await new Promise((r) => setTimeout(r, 350)); // nghỉ giữa các nhóm cho đỡ lag Chrome
@@ -154,32 +266,43 @@
   window.tddFilter = (f) => { FILTER = f; if (LAST.length) render(LAST); };
 
   window.tddOpen = (idx) => {
-    const r = LAST[idx];
-    if (!r || !r.ok) return;
     const box = $("tdd-d" + idx);
     if (!box) return;
-    if (box.innerHTML) { box.innerHTML = ""; return; }
+    if (OPEN.has(idx)) { OPEN.delete(idx); box.innerHTML = ""; return; }
+    const r = LAST[idx];
+    if (!r || !r.ok) return;
+    OPEN.add(idx);
+    box.innerHTML = detailHTML(r);
+  };
+
+  function detailHTML(r) {
     const v = netOf(r);
     const inSet = new Set(v.reaIds);
     const yes = [], no = [];
     v.mem.forEach((m) => ((inSet.has(m.id) ? yes : no).push(m)));
-    const li = (m) => `<span style="display:inline-block;background:#f6f0f1;border-radius:1000px;padding:3px 6px 3px 10px;margin:2px;font-size:12px">${m.name} <button onclick="event.stopPropagation();window.tddExAdd('${m.id}','${String(m.name || "").replace(/'/g, "")}')" title="Loại người này" style="border:0;background:${BRAND};color:#fff;border-radius:1000px;width:18px;height:18px;cursor:pointer;font-size:11px">×</button></span>`;
-    box.innerHTML = `<div style="background:#faf7f8;border-radius:12px;padding:8px 10px;margin:2px 0 8px">
+    let h = `<div style="background:#faf7f8;border-radius:12px;padding:8px 10px;margin:2px 0 8px">
       <div style="font-weight:800;color:#1a7f37;margin:4px 0">✓ ĐÃ TƯƠNG TÁC (${yes.length})</div>
-      <div>${yes.length ? yes.map(li).join("") : "<span style='color:#999'>—</span>"}</div>
+      <div>${yes.length ? yes.map(liOf).join("") : "<span style='color:#999'>—</span>"}</div>
       <div style="font-weight:800;color:${BRAND};margin:8px 0 4px">✗ CHƯA TƯƠNG TÁC (${no.length})</div>
-      <div>${no.length ? no.map(li).join("") : "<span style='color:#999'>—</span>"}</div>
-      <div style="color:#999;font-size:11px;margin-top:6px">Bấm × ở tên để loại người đó khỏi thống kê.</div></div>`;
-  };
+      <div>${no.length ? no.map(liOf).join("") : "<span style='color:#999'>—</span>"}</div>`;
+    if (r.rangeIds && MODE_USED === "range") {
+      const rset = new Set(r.rangeIds.filter((id) => !isEx(id, r.names[id])));
+      const silent = v.mem.filter((m) => !rset.has(m.id));
+      h += `<div style="font-weight:800;color:#5b21b6;margin:8px 0 4px">◈ IM LẶNG CẢ ĐỢT (${silent.length}) — từ tin NAM tới ${r.rangeN} tin sau</div>
+        <div>${silent.length ? silent.map(liOf).join("") : "<span style='color:#999'>—</span>"}</div>`;
+    }
+    h += `<div style="color:#999;font-size:11px;margin-top:6px">Bấm × ở tên để loại người đó khỏi thống kê.</div></div>`;
+    return h;
+  }
 
   function render(out) {
     const body = $("tdd-body");
     const good = out.filter((r) => r.ok);
     let sumN = 0, sumT = 0;
-    good.forEach((r) => { const v = netOf(r); sumN += v.n; sumT += v.t; });
+    good.forEach((r) => { const d = dispOf(r); sumN += d.n; sumT += d.t; });
     const exN = getEx().length;
     const pct = sumT ? Math.round(sumN / sumT * 1000) / 10 : 0;
-    const passN = good.filter((r) => { const v = netOf(r); return v.t && v.n / v.t >= 0.7; }).length;
+    const passN = good.filter((r) => { const d = dispOf(r); return d.t && d.n / d.t >= 0.7; }).length;
     const col = pct >= 70 ? "#1a7f37" : pct >= 50 ? "#9a6700" : BRAND;
     const card = (label, val, sub) => `<div style="flex:1;background:#faf7f8;border:1px solid #f0dfe3;border-radius:14px;padding:8px 10px;min-width:0">
       <div style="font-size:11px;color:#888">${label}</div>
@@ -189,32 +312,33 @@
       ${card("Đã tương tác", sumN + "<span style='color:#999;font-size:13px'>/" + sumT + "</span>", exN ? "đã trừ " + exN + " người" : "tổng 39 nhóm")}
       ${card("Tỉ lệ chung", `<span style="color:${col}">${pct}%</span>`, "chuẩn đạt ≥ 70%")}
       ${card("Lớp đạt", passN + "<span style='color:#999;font-size:13px'>/" + good.length + "</span>", (out.length - good.length) ? (out.length - good.length) + " nhóm lỗi" : "quét sạch")}</div>`;
-    h += `<details style="margin-bottom:8px"><summary style="cursor:pointer;font-size:12px;color:#666">Loại trừ (${exN} người) — bấm để xem/sửa</summary>
-      <div style="display:flex;gap:6px;margin:6px 0"><input id="tdd-exname" placeholder="Tên hoặc user_id cần loại…" style="flex:1;border:1px solid #ddd;border-radius:1000px;padding:6px 12px">
-      <button onclick="window.tddExAddByName()" style="border:0;background:#111;color:#fff;border-radius:1000px;padding:6px 14px;cursor:pointer">+ Thêm</button></div>
-      <div>${getEx().map((e, i) => `<span style="display:inline-block;background:#eee;border-radius:1000px;padding:3px 6px 3px 10px;margin:2px;font-size:12px">${e.name || e.id} <button onclick="window.tddExDel(${i})" style="border:0;background:#999;color:#fff;border-radius:1000px;width:18px;height:18px;cursor:pointer">×</button></span>`).join("") || "<span style='color:#999;font-size:12px'>Chưa loại ai</span>"}</div></details>`;
+
     h += `<div style="display:flex;gap:6px;margin-bottom:8px">
       ${["all", "fail", "pass"].map((f) => `<button onclick="window.tddFilter('${f}')" style="border:0;border-radius:1000px;padding:6px 14px;cursor:pointer;font-weight:700;font-size:12px;${FILTER === f ? `background:${BRAND};color:#fff` : "background:#f3e2e6;color:#7a4a52"}">${f === "all" ? "Tất cả" : f === "fail" ? "Chưa đạt" : "Đã đạt"}</button>`).join("")}
-      <span style="font-size:11px;color:#999;align-self:center">Bấm vào lớp để xem từng người</span></div>`;
+      <span style="font-size:11px;color:#999;align-self:center">Bấm vào lớp để xem từng người${MODE_USED === "range" ? " · <b>chế độ cả đợt</b>" : ""}</span></div>`;
     h += `<div>`;
     out.forEach((r, idx) => {
       if (!r.ok) {
         if (FILTER === "pass") return;
         h += `<div style="padding:8px 4px;border-top:1px solid #f2f2f2;color:#999">${r.name} — ${r.note}</div>`; return;
       }
-      const v = netOf(r);
-      const p = v.t ? Math.round(v.n / v.t * 1000) / 10 : 0;
+      const d = dispOf(r);
+      const p = d.t ? Math.round(d.n / d.t * 1000) / 10 : 0;
       if (FILTER === "fail" && p >= 70) return;
       if (FILTER === "pass" && p < 70) return;
       const c = p >= 70 ? "#1a7f37" : p >= 50 ? "#9a6700" : BRAND;
       h += `<div onclick="window.tddOpen(${idx})" style="padding:8px 4px;border-top:1px solid #f2f2f2;cursor:pointer">
         <div style="display:flex;justify-content:space-between;align-items:baseline">
-          <b>${r.name}</b><span><b>${v.n}</b><span style="color:#999">/${v.t}</span> · <b style="color:${c}">${p}%</b> <span style="color:#bbb">▾</span></span></div>
+          <b>${r.name}</b><span><b>${d.n}</b><span style="color:#999">/${d.t}</span> · <b style="color:${c}">${p}%</b> <span style="color:#bbb">▾</span></span></div>
         <div style="height:8px;background:#f3e2e6;border-radius:1000px;margin-top:6px;overflow:hidden">
           <div style="height:100%;width:${Math.min(p, 100)}%;background:${c};border-radius:1000px"></div></div></div>
         <div id="tdd-d${idx}"></div>`;
     });
     body.innerHTML = h + "</div>";
+    OPEN.forEach((idx) => {
+      const box = $("tdd-d" + idx), r = out[idx];
+      if (box && r && r.ok) box.innerHTML = detailHTML(r);
+    });
   }
 
   $("tdd-go").onclick = () => scan().catch((e) => say("Lỗi: " + (e.message || e) + " — thử tải lại trang rồi bấm lại."));
@@ -222,8 +346,8 @@
     if (!LAST.length) return alert("Chưa có kết quả, quét trước đã.");
     const t = LAST.map((r) => {
       if (!r.ok) return `${r.name}: ${r.note}`;
-      const v = netOf(r);
-      return `${r.name}: ${v.n}/${v.t}`;
+      const d = dispOf(r);
+      return `${r.name}: ${d.n}/${d.t}`;
     }).join("\n");
     navigator.clipboard.writeText(`ĐIỂM DANH TAMMI ${new Date().toLocaleString("vi-VN")}\n${t}`).then(() => alert("Đã copy!"));
   };
@@ -240,8 +364,8 @@
       const cres = await (await fetch(u + `/rest/v1/classes?group_id=eq.${r.gid}&select=id`, { headers: H })).json();
       const cid = cres[0] && cres[0].id;
       if (!cid) continue;
-      const v = netOf(r);
-      await fetch(u + "/rest/v1/snapshots_hourly", { method: "POST", headers: { ...H, Prefer: "resolution=merge-duplicates" }, body: JSON.stringify({ class_id: cid, date, hour, message_id: r.msgId, message_time: new Date(r.msgTime).toISOString(), reaction_count: r.rc, interacted_count: v.n }) });
+      const d = dispOf(r);
+      await fetch(u + "/rest/v1/snapshots_hourly", { method: "POST", headers: { ...H, Prefer: "resolution=merge-duplicates" }, body: JSON.stringify({ class_id: cid, date, hour, message_id: r.msgId, message_time: new Date(r.msgTime).toISOString(), reaction_count: r.rc, interacted_count: d.n }) });
     }
     for (const e of getEx()) {
       await fetch(u + "/rest/v1/excluded_users", { method: "POST", headers: { ...H, Prefer: "resolution=merge-duplicates" }, body: JSON.stringify({ user_id: e.id, name_match: e.name, reason: "bookmarklet" }) });
