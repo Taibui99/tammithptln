@@ -15,7 +15,7 @@
   root.style.cssText = `position:fixed;z-index:999999;top:16px;right:16px;width:560px;max-width:92vw;max-height:86vh;display:flex;flex-direction:column;background:#fff;color:${INK};border-radius:20px;box-shadow:0 16px 50px rgba(0,0,0,.35);overflow:hidden;${css}`;
   root.innerHTML = `
     <div style="background:${BRAND};color:#fff;padding:12px 16px;font-weight:800;font-size:15px;display:flex;justify-content:space-between;align-items:center">
-      <span>◈ ĐIỂM DANH TAMMI · THPT LỘC NINH <span style="background:rgba(255,255,255,.25);border-radius:1000px;padding:1px 8px;font-size:11px">v1.5</span></span>
+      <span>◈ ĐIỂM DANH TAMMI · THPT LỘC NINH <span style="background:rgba(255,255,255,.25);border-radius:1000px;padding:1px 8px;font-size:11px">v1.6</span></span>
       <span style="display:flex;gap:6px">
         <button id="tdd-big" title="Phóng to" style="border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:1000px;width:28px;height:28px;cursor:pointer;font-weight:800">⛶</button>
         <button id="tdd-set" title="Cài đặt" style="border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:1000px;width:28px;height:28px;cursor:pointer;font-weight:800">⚙</button>
@@ -40,7 +40,7 @@
         <b>⚙ CÀI ĐẶT</b>
         <div style="margin:8px 0">Chế độ chấm:<br>
           <label><input type="radio" name="tdd-mode" value="react"> Tim tin NAM (nhanh)</label><br>
-          <label><input type="radio" name="tdd-mode" value="range"> Tương tác cả đợt — từ tin NAM tới <input id="tdd-after" type="number" min="1" max="29" value="10" style="width:48px;border:1px solid #ddd;border-radius:8px;padding:2px 6px"> tin sau</label>
+          <label><input type="radio" name="tdd-mode" value="range" checked> Tương tác cả đợt — từ tin NAM tới <input id="tdd-after" type="number" min="1" max="29" value="10" style="width:48px;border:1px solid #ddd;border-radius:8px;padding:2px 6px"> tin sau</label>
           <div style="color:#888">Cả đợt: ai gửi tin/nhả tim trong đoạn đó đều tính đã tương tác.</div></div>
         <div style="margin:8px 0"><label><input type="checkbox" id="tdd-auto-cb"> Tự bung panel mỗi lần mở Tammi.vn (extension)</label></div>
         <div style="margin:8px 0"><b>Loại trừ (<span id="tdd-exn">0</span>)</b> — bấm × ở tên trong chi tiết lớp cũng được
@@ -80,17 +80,17 @@
     return `<span style="display:inline-block;background:#f6f0f1;border-radius:1000px;padding:3px 6px 3px 10px;margin:2px;font-size:12px">${m.name} <button onclick="event.stopPropagation();window.tddExAdd('${m.id}','${safe}')" title="Loại người này" style="border:0;background:${BRAND};color:#fff;border-radius:1000px;width:18px;height:18px;cursor:pointer;font-size:11px">×</button></span>`;
   }
 
-  // chế độ chấm đang dùng (đọc lúc quét)
-  var MODE_USED = "react";
+  // chế độ chấm đang dùng (đọc lúc quét) — mặc định: có tương tác là tính
+  var MODE_USED = "range";
   function readMode() {
     try {
       const c = document.querySelector('input[name="tdd-mode"]:checked');
-      const md = (c && c.value) || localStorage.tdd_mode || "react";
+      const md = (c && c.value) || localStorage.tdd_mode || "range";
       localStorage.tdd_mode = md;
       const an = Math.max(1, Math.min(29, Number(($("tdd-after") || {}).value || localStorage.tdd_after || 10)));
       localStorage.tdd_after = an;
       return { mode: md, after: an };
-    } catch (e) { return { mode: "react", after: 10 }; }
+    } catch (e) { return { mode: "range", after: 10 }; }
   }
   function dispOf(r) {
     const v = netOf(r);
@@ -139,7 +139,7 @@
   }
 
   try {
-    const md = localStorage.tdd_mode || "react";
+    const md = localStorage.tdd_mode || "range";
     const rr = document.querySelector('input[name="tdd-mode"][value="' + md + '"]');
     if (rr) rr.checked = true;
     if ($("tdd-after")) $("tdd-after").value = localStorage.tdd_after || 10;
