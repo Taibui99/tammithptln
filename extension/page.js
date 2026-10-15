@@ -205,7 +205,7 @@
       i++;
       say(`Đang quét ${i}/${groups.length}: <b>${g.conversationName}</b>… (đã xong ${out.filter((r) => r.ok).length})`); setBar(i / groups.length * 0.9);
       try {
-        const h = await z.queryHistoryMessage(g.conversationID, 2, { count: 30, reverse: true });
+        const h = await z.queryHistoryMessage(g.conversationID, 2, { count: 100, reverse: true });
         const list = h.messageList || [];
         const t = list.find((m) => { const s = senderOf(m).toUpperCase(); return (s.includes("TRƯƠNG KHẮC NAM") || s.includes("TRUONG KHAC NAM")) && m.timestamp >= day.getTime(); })
           || list.find((m) => { const s = senderOf(m).toUpperCase(); return s.includes("TRƯƠNG KHẮC NAM") || s.includes("TRUONG KHAC NAM"); });
@@ -237,6 +237,21 @@
           if (!a.some((e) => e.id === selfId)) { a.push({ id: selfId, name: names[selfId] }); setEx(a); }
         }
         const rc = (t.reactions || []).reduce((s, r) => s + (r.totalCount || 0), 0);
+        // Cộng dồn: ai từng tim BẤT KỲ tin NAM nào trong lịch sử gần đây (tối đa 10 tin)
+        var namIds = null, namN = 0;
+        try {
+          const isNAMm = (m) => { const s = senderOf(m).toUpperCase(); return s.includes("TRƯƠNG KHẮC NAM") || s.includes("TRUONG KHAC NAM"); };
+          const namAll = list.filter(isNAMm).slice(-10);
+          namN = list.filter(isNAMm).length;
+          const nset = new Set();
+          for (const nm of namAll) {
+            const nrts = [...new Set((nm.reactions || []).map((r) => r.reactionType))];
+            for (const rt of (nrts.length ? nrts : ["71"])) {
+              try { (await reactors(z, nm, rt)).forEach((id) => nset.add(id)); } catch (e) {}
+            }
+          }
+          namIds = [...nset].filter(Boolean);
+        } catch (e) {}
         var rangeIds = null, rangeN = 0;
         if (MODE_USED === "range") {
           var cands = list.filter((m) => m.timestamp > t.timestamp).sort((a, b) => b.timestamp - a.timestamp).slice(0, mm.after);
@@ -254,7 +269,7 @@
           }
           rangeIds = [...set].filter(Boolean);
         }
-        out.push({ name: g.conversationName, gid: g.conversationID, ok: true, reactors: all, members, names, rc, msgId: t.messageID, msgTime: t.timestamp, rangeIds, rangeN });
+        out.push({ name: g.conversationName, gid: g.conversationID, ok: true, reactors: all, members, names, rc, msgId: t.messageID, msgTime: t.timestamp, rangeIds, rangeN, namIds, namN });
       } catch (e) { out.push({ name: g.conversationName, ok: false, note: e.message || "lỗi" }); }
       render(out);
       await new Promise((r) => setTimeout(r, 350)); // nghỉ giữa các nhóm cho đỡ lag Chrome
@@ -295,11 +310,19 @@
       yesT = `✓ TIM TIN NAM (${yes.length})`;
       noT = `✗ CHƯA TIM TIN NAM (${no.length})`;
     }
+    let neverH = "";
+    if (r.namIds) {
+      const nset = new Set(r.namIds.filter((id) => !isEx(id, r.names[id])));
+      const never = v.mem.filter((m) => !nset.has(m.id));
+      neverH = `<div style="font-weight:800;color:#7c2d12;margin:8px 0 4px">◈ CHƯA TỪNG TIM TIN NAM (${never.length}) — trong ${r.namN || "?"} tin NAM gần nhất</div>
+      <div>${never.length ? never.map(liOf).join("") : "<span style='color:#999'>—</span>"}</div>`;
+    }
     return `<div style="background:#faf7f8;border-radius:12px;padding:8px 10px;margin:2px 0 8px">
       <div style="font-weight:800;color:#1a7f37;margin:4px 0">${yesT}</div>
       <div>${yes.length ? yes.map(liOf).join("") : "<span style='color:#999'>—</span>"}</div>
       <div style="font-weight:800;color:${BRAND};margin:8px 0 4px">${noT}</div>
       <div>${no.length ? no.map(liOf).join("") : "<span style='color:#999'>—</span>"}</div>
+      ${neverH}
       <div style="color:#999;font-size:11px;margin-top:6px">Bấm × ở tên để loại người đó khỏi thống kê.</div></div>`;
   }
 
