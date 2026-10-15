@@ -79,25 +79,7 @@
     const safe = String(m.name || "").replace(/'/g, "");
     return `<span style="display:inline-block;background:#f6f0f1;border-radius:1000px;padding:3px 6px 3px 10px;margin:2px;font-size:12px">${m.name} <button onclick="event.stopPropagation();window.tddExAdd('${m.id}','${safe}')" title="Loại người này" style="border:0;background:${BRAND};color:#fff;border-radius:1000px;width:18px;height:18px;cursor:pointer;font-size:11px">×</button></span>`;
   }
-  function detailHTML(r) {
-    const v = netOf(r);
-    const inSet = new Set(v.reaIds);
-    const yes = [], no = [];
-    v.mem.forEach((m) => ((inSet.has(m.id) ? yes : no).push(m)));
-    let h = `<div style="background:#faf7f8;border-radius:12px;padding:8px 10px;margin:2px 0 8px">
-      <div style="font-weight:800;color:#1a7f37;margin:4px 0">✓ ĐÃ TƯƠNG TÁC (${yes.length})</div>
-      <div>${yes.length ? yes.map(liOf).join("") : "<span style='color:#999'>—</span>"}</div>
-      <div style="font-weight:800;color:${BRAND};margin:8px 0 4px">✗ CHƯA TƯƠNG TÁC (${no.length})</div>
-      <div>${no.length ? no.map(liOf).join("") : "<span style='color:#999'>—</span>"}</div>`;
-    if (r.rangeIds && MODE_USED === "range") {
-      const rset = new Set(r.rangeIds.filter((id) => !isEx(id, r.names[id])));
-      const silent = v.mem.filter((m) => !rset.has(m.id));
-      h += `<div style="font-weight:800;color:#5b21b6;margin:8px 0 4px">◈ IM LẶNG CẢ ĐỢT (${silent.length}) — từ tin NAM tới ${r.rangeN || ""} tin sau</div>
-        <div>${silent.length ? silent.map(liOf).join("") : "<span style='color:#999'>—</span>"}</div>`;
-    }
-    h += `<div style="color:#999;font-size:11px;margin-top:6px">Bấm × ở tên để loại người đó khỏi thống kê.</div></div>`;
-    return h;
-  }
+
   // chế độ chấm đang dùng (đọc lúc quét)
   var MODE_USED = "react";
   function readMode() {
@@ -305,9 +287,9 @@
     const yes = [], no = [];
     v.mem.forEach((m) => ((inSet.has(m.id) ? yes : no).push(m)));
     let h = `<div style="background:#faf7f8;border-radius:12px;padding:8px 10px;margin:2px 0 8px">
-      <div style="font-weight:800;color:#1a7f37;margin:4px 0">✓ ĐÃ TƯƠNG TÁC (${yes.length})</div>
+      <div style="font-weight:800;color:#1a7f37;margin:4px 0">✓ TIM TIN NAM (${yes.length})</div>
       <div>${yes.length ? yes.map(liOf).join("") : "<span style='color:#999'>—</span>"}</div>
-      <div style="font-weight:800;color:${BRAND};margin:8px 0 4px">✗ CHƯA TƯƠNG TÁC (${no.length})</div>
+      <div style="font-weight:800;color:${BRAND};margin:8px 0 4px">✗ CHƯA TIM TIN NAM (${no.length})</div>
       <div>${no.length ? no.map(liOf).join("") : "<span style='color:#999'>—</span>"}</div>`;
     if (r.rangeIds && MODE_USED === "range") {
       const rset = new Set(r.rangeIds.filter((id) => !isEx(id, r.names[id])));
