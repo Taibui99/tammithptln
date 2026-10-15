@@ -13,7 +13,7 @@
   root.style.cssText = `position:fixed;z-index:999999;top:16px;right:16px;width:560px;max-width:92vw;max-height:86vh;display:flex;flex-direction:column;background:#fff;color:${INK};border-radius:20px;box-shadow:0 16px 50px rgba(0,0,0,.35);overflow:hidden;${css}`;
   root.innerHTML = `
     <div style="background:${BRAND};color:#fff;padding:12px 16px;font-weight:800;font-size:15px;display:flex;justify-content:space-between;align-items:center">
-      <span>◈ ĐIỂM DANH TAMMI · THPT LỘC NINH</span>
+      <span>◈ ĐIỂM DANH TAMMI · THPT LỘC NINH <span style="background:rgba(255,255,255,.25);border-radius:1000px;padding:1px 8px;font-size:11px">v1.5</span></span>
       <span style="display:flex;gap:6px">
         <button id="tdd-big" title="Phóng to" style="border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:1000px;width:28px;height:28px;cursor:pointer;font-weight:800">⛶</button>
         <button id="tdd-set" title="Cài đặt" style="border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:1000px;width:28px;height:28px;cursor:pointer;font-weight:800">⚙</button>
@@ -131,9 +131,10 @@
   function setEx(a) { try { localStorage.tdd_exclude = JSON.stringify(a); } catch (e) {} }
   // Tên "X (bạn)" là cách Tammi ghi tên của chính acc đang login — chuẩn hoá để đếm cho đúng
   function normName(s) { return String(s || "").replace(/\s*\(b[aạ]n\)\s*$/i, "").trim(); }
+  function normBasic(s) { return normName(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D"); }
   function isEx(id, nm) {
-    const U = normName(nm).toUpperCase();
-    return getEx().some((e) => (e.id && e.id === id) || (e.name && U.includes(normName(e.name).toUpperCase())));
+    const U = normBasic(nm).toUpperCase();
+    return getEx().some((e) => (e.id && e.id === id) || (e.name && U.includes(normBasic(e.name).toUpperCase())));
   }
   window.tddExAdd = (id, nm) => {
     try {
@@ -189,6 +190,13 @@
 
   async function scan() {
     const z = zim();
+    // Nhận diện chính acc đang quét bằng ID (chắc ăn hơn đoán qua đuôi "(bạn)") rồi tự loại
+    try {
+      const si = await z.querySelfUserInfo().catch(() => null);
+      const u = si && (si.userID || si.userId || (si.selfUserInfo && (si.selfUserInfo.userID || si.selfUserInfo.userId)) || (si.userInfo && (si.userInfo.userID || si.userInfo.userId)));
+      const nm = si && (si.userName || si.nickname || (si.selfUserInfo && (si.selfUserInfo.userName || si.selfUserInfo.nickname)));
+      if (u) { const a = getEx(); if (!a.some((e) => e.id === u)) { a.push({ id: u, name: normName(nm) || null }); setEx(a); paintEx(); } }
+    } catch (e) {}
     say("Đang lấy danh sách nhóm (phân trang)…"); setBar(0.02);
     const groups = [];
     let nextConv = null;
