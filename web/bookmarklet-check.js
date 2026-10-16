@@ -9,14 +9,17 @@
   if (l) l.remove();
   if (document.getElementById("tdiemdanh")) { document.getElementById("tdiemdanh").remove(); return; }
   const BRAND = "#EE0033", INK = "#1d1d1d";
+  const TDD_VER = "1.8";
+  window.__tdd_kind = "bm";
   const css = `font-family:"Sans Flex",system-ui,sans-serif`;
   const root = document.createElement("div");
   root.id = "tdiemdanh";
   root.style.cssText = `position:fixed;z-index:999999;top:16px;right:16px;width:560px;max-width:92vw;max-height:86vh;display:flex;flex-direction:column;background:#fff;color:${INK};border-radius:20px;box-shadow:0 16px 50px rgba(0,0,0,.35);overflow:hidden;${css}`;
   root.innerHTML = `
     <div style="background:${BRAND};color:#fff;padding:12px 16px;font-weight:800;font-size:15px;display:flex;justify-content:space-between;align-items:center">
-      <span>◈ ĐIỂM DANH TAMMI · THPT LỘC NINH <span style="background:rgba(255,255,255,.25);border-radius:1000px;padding:1px 8px;font-size:11px">v1.8</span></span>
+      <span>◈ ĐIỂM DANH TAMMI · THPT LỘC NINH <span style="background:rgba(255,255,255,.25);border-radius:1000px;padding:1px 8px;font-size:11px">v${TDD_VER}</span></span>
       <span style="display:flex;gap:6px">
+        <button id="tdd-upd" title="Kiểm tra cập nhật" style="border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:1000px;width:28px;height:28px;cursor:pointer;font-weight:800">⟳</button>
         <button id="tdd-big" title="Phóng to" style="border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:1000px;width:28px;height:28px;cursor:pointer;font-weight:800">⛶</button>
         <button id="tdd-set" title="Cài đặt" style="border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:1000px;width:28px;height:28px;cursor:pointer;font-weight:800">⚙</button>
         <button id="tdd-x" style="border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:1000px;width:28px;height:28px;cursor:pointer;font-weight:800">✕</button>
@@ -52,6 +55,25 @@
     <div id="tdd-body" style="padding:8px 16px;overflow:auto;font-size:13px"></div>`;
   document.body.appendChild(root);
   document.getElementById("tdd-x").onclick = () => root.remove();
+  document.getElementById("tdd-upd").onclick = () => window.tddCheckUpdate();
+  // Nút cập nhật: so version.txt trên GitHub với bản đang chạy; có mới thì tự tải lại
+  window.tddCheckUpdate = async () => {
+    say("Đang kiểm tra cập nhật…");
+    const base = "https://cdn.jsdelivr.net/gh/Taibui99/tammithptln@main/";
+    const file = (window.__tdd_kind === "ext" ? "extension/page.js" : "web/bookmarklet-check.js");
+    try {
+      const v = (await (await fetch(base + "version.txt?v=" + Date.now())).text()).trim();
+      if (!v) throw new Error("rỗng");
+      if (v === TDD_VER) { say(`Đã ở bản mới nhất (v${TDD_VER}) ✓`); return; }
+      say(`Có bản mới v${v} (đang v${TDD_VER}) — đang cập nhật, đợi chút…`);
+      try { document.getElementById("tdiemdanh").remove(); } catch (e) {}
+      window.__tdd_booted = false;
+      const s = document.createElement("script");
+      s.src = base + file + "?v=" + Date.now();
+      s.onerror = () => say("Tải bản mới lỗi — F5 trang rồi thử lại.");
+      document.body.appendChild(s);
+    } catch (e) { say("Không kiểm tra được (mạng/CSP) — thử F5 trang."); }
+  };
   let BIG = false;
   document.getElementById("tdd-big").onclick = () => {
     BIG = !BIG;

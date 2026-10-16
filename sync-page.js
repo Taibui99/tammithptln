@@ -12,5 +12,6 @@ const newT = '(function () {\n  var l = document.getElementById("tdd-load");\n  
   '  var p = document.getElementById("tdiemdanh");\n  if (p) { p.remove(); if (!manual) return; }';
 if (!s.includes(oldT)) { console.error("TOGGLE NOT FOUND"); process.exit(1); }
 s = s.replace(oldT, newT);
+s = s.split('window.__tdd_kind = "bm"').join('window.__tdd_kind = "ext"');
 fs.writeFileSync(path.join(dir, "extension", "page.js"), s);
 console.log("synced page.js, bytes:", s.length);
