@@ -6,6 +6,9 @@ git add -A
 for /f %%t in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmm"') do set TS=%%t
 git commit -m "update %TS%" || echo Khong co gi moi de commit.
 git push
+curl -s "https://purge.jsdelivr.net/gh/Taibui99/tammithptln@main/extension/page.js" >nul
+curl -s "https://purge.jsdelivr.net/gh/Taibui99/tammithptln@main/web/bookmarklet-check.js" >nul
+echo Da purge CDN 1 phat (dung bam purge tay nua, keo bi khoa).
 echo.
 echo Xong! May thay tu len trong vai gio (gap thi purge 1 phat + bao thay Ctrl+F5).
 pause

@@ -13,7 +13,7 @@
   root.style.cssText = `position:fixed;z-index:999999;top:16px;right:16px;width:560px;max-width:92vw;max-height:86vh;display:flex;flex-direction:column;background:#fff;color:${INK};border-radius:20px;box-shadow:0 16px 50px rgba(0,0,0,.35);overflow:hidden;${css}`;
   root.innerHTML = `
     <div style="background:${BRAND};color:#fff;padding:12px 16px;font-weight:800;font-size:15px;display:flex;justify-content:space-between;align-items:center">
-      <span>◈ ĐIỂM DANH TAMMI · THPT LỘC NINH <span style="background:rgba(255,255,255,.25);border-radius:1000px;padding:1px 8px;font-size:11px">v1.7</span></span>
+      <span>◈ ĐIỂM DANH TAMMI · THPT LỘC NINH <span style="background:rgba(255,255,255,.25);border-radius:1000px;padding:1px 8px;font-size:11px">v1.8</span></span>
       <span style="display:flex;gap:6px">
         <button id="tdd-big" title="Phóng to" style="border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:1000px;width:28px;height:28px;cursor:pointer;font-weight:800">⛶</button>
         <button id="tdd-set" title="Cài đặt" style="border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:1000px;width:28px;height:28px;cursor:pointer;font-weight:800">⚙</button>

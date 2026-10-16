@@ -22,7 +22,8 @@
     console.log("[tdd] inject, lấy bản mới nhất từ GitHub…");
     var done = false;
     var s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/gh/Taibui99/tammithptln@main/extension/page.js";
+    // ?v= giờ hiện tại: trình duyệt + CDN coi mỗi lần là bản khác nhau → không bao giờ ăn cache cũ
+    s.src = "https://cdn.jsdelivr.net/gh/Taibui99/tammithptln@main/extension/page.js?v=" + Date.now();
     s.onload = function () { done = true; s.remove(); };
     s.onerror = function () { s.remove(); useBundled("không tải được CDN"); };
     (document.head || document.documentElement).appendChild(s);
