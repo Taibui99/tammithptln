@@ -161,14 +161,19 @@
     return m.senderUserID || "?";
   }
   async function reactors(z, target, rt) {
-    let ids = (((target.reactions || []).find((r) => r.reactionType === rt) || {}).userList || []).map((u) => u.userID);
-    let nf = 0;
-    for (let i = 0; i < 12; i++) {
-      const r = await z.queryMessageReactionUserList(target, { reactionType: rt, count: 50, nextFlag: nf });
-      for (const u of r.userList || []) { const id = u.userID || u.userId; if (id && !ids.includes(id)) ids.push(id); }
-      if (!r.nextFlag) break;
-      nf = r.nextFlag;
-    }
+    // Không bao giờ throw: tin chưa có reaction thì trả rỗng (SDK hay quăng TypeError kiểu reading '71')
+    let ids = [];
+    try {
+      ids = (((target.reactions || []).find((r) => r.reactionType === rt) || {}).userList || []).map((u) => u && u.userID).filter(Boolean);
+      if (!target || !target.messageSeq) return [...new Set(ids)];
+      let nf = 0;
+      for (let i = 0; i < 12; i++) {
+        const r = await z.queryMessageReactionUserList(target, { reactionType: rt, count: 50, nextFlag: nf });
+        for (const u of r.userList || []) { const id = u && (u.userID || u.userId); if (id && !ids.includes(id)) ids.push(id); }
+        if (!r.nextFlag) break;
+        nf = r.nextFlag;
+      }
+    } catch (e) { console.log("[tdd] bỏ qua query tim:", rt, "-", e && e.message); }
     return [...new Set(ids)];
   }
 
@@ -214,7 +219,7 @@
         if (!t) { out.push({ name: g.conversationName, ok: false, note: "chưa có tin hôm nay" }); render(out); continue; }
         const rts = [...new Set((t.reactions || []).map((r) => r.reactionType))];
         let all = [];
-        for (const rt of (rts.length ? rts : ["71"])) all.push(...await reactors(z, t, rt));
+        for (const rt of rts) all.push(...await reactors(z, t, rt));
         all = [...new Set(all)];
         const members = [], names = {};
         var selfId = null; // acc đang quét (tên có đuôi " (bạn)") — tự loại, không phải học sinh
@@ -248,7 +253,7 @@
           const nset = new Set();
           for (const nm of namAll) {
             const nrts = [...new Set((nm.reactions || []).map((r) => r.reactionType))];
-            for (const rt of (nrts.length ? nrts : ["71"])) {
+            for (const rt of (nrts.length ? nrts : [])) {
               try { (await reactors(z, nm, rt)).forEach((id) => nset.add(id)); } catch (e) {}
             }
           }
