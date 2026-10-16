@@ -9,7 +9,7 @@
   if (l) l.remove();
   if (document.getElementById("tdiemdanh")) { document.getElementById("tdiemdanh").remove(); return; }
   const BRAND = "#EE0033", INK = "#1d1d1d";
-  const TDD_VER = "1.8";
+  const TDD_VER = "1.9";
   window.__tdd_kind = "bm";
   const css = `font-family:"Sans Flex",system-ui,sans-serif`;
   const root = document.createElement("div");

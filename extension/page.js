@@ -7,7 +7,7 @@
   var p = document.getElementById("tdiemdanh");
   if (p) { p.remove(); if (!manual) return; }
   const BRAND = "#EE0033", INK = "#1d1d1d";
-  const TDD_VER = "1.8";
+  const TDD_VER = "1.9";
   window.__tdd_kind = "ext";
   const css = `font-family:"Sans Flex",system-ui,sans-serif`;
   const root = document.createElement("div");
