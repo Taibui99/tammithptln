@@ -15,7 +15,7 @@
   root.style.cssText = `position:fixed;z-index:999999;top:16px;right:16px;width:560px;max-width:92vw;max-height:86vh;display:flex;flex-direction:column;background:#fff;color:${INK};border-radius:20px;box-shadow:0 16px 50px rgba(0,0,0,.35);overflow:hidden;${css}`;
   root.innerHTML = `
     <div style="background:${BRAND};color:#fff;padding:12px 16px;font-weight:800;font-size:15px;display:flex;justify-content:space-between;align-items:center">
-      <span>◈ ĐIỂM DANH TAMMI · THPT LỘC NINH <span style="background:rgba(255,255,255,.25);border-radius:1000px;padding:1px 8px;font-size:11px">v1.6</span></span>
+      <span>◈ ĐIỂM DANH TAMMI · THPT LỘC NINH <span style="background:rgba(255,255,255,.25);border-radius:1000px;padding:1px 8px;font-size:11px">v1.7</span></span>
       <span style="display:flex;gap:6px">
         <button id="tdd-big" title="Phóng to" style="border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:1000px;width:28px;height:28px;cursor:pointer;font-weight:800">⛶</button>
         <button id="tdd-set" title="Cài đặt" style="border:0;background:rgba(255,255,255,.25);color:#fff;border-radius:1000px;width:28px;height:28px;cursor:pointer;font-weight:800">⚙</button>
@@ -211,16 +211,19 @@
     for (const g of groups) {
       i++;
       say(`Đang quét ${i}/${groups.length}: <b>${g.conversationName}</b>… (đã xong ${out.filter((r) => r.ok).length})`); setBar(i / groups.length * 0.9);
+      let phase = "history";
       try {
         const h = await z.queryHistoryMessage(g.conversationID, 2, { count: 100, reverse: true });
         const list = h.messageList || [];
         const t = list.find((m) => { const s = senderOf(m).toUpperCase(); return (s.includes("TRƯƠNG KHẮC NAM") || s.includes("TRUONG KHAC NAM")) && m.timestamp >= day.getTime(); })
           || list.find((m) => { const s = senderOf(m).toUpperCase(); return s.includes("TRƯƠNG KHẮC NAM") || s.includes("TRUONG KHAC NAM"); });
         if (!t) { out.push({ name: g.conversationName, ok: false, note: "chưa có tin hôm nay" }); render(out); continue; }
+        phase = "reactors";
         const rts = [...new Set((t.reactions || []).map((r) => r.reactionType))];
         let all = [];
         for (const rt of rts) all.push(...await reactors(z, t, rt));
         all = [...new Set(all)];
+        phase = "members";
         const members = [], names = {};
         var selfId = null; // acc đang quét (tên có đuôi " (bạn)") — tự loại, không phải học sinh
         try {
@@ -259,6 +262,7 @@
           }
           namIds = [...nset].filter(Boolean);
         } catch (e) {}
+        phase = "nam";
         var rangeIds = null, rangeN = 0;
         if (MODE_USED === "range") {
           var cands = list.filter((m) => m.timestamp > t.timestamp).sort((a, b) => b.timestamp - a.timestamp).slice(0, mm.after);
@@ -277,7 +281,7 @@
           rangeIds = [...set].filter(Boolean);
         }
         out.push({ name: g.conversationName, gid: g.conversationID, ok: true, reactors: all, members, names, rc, msgId: t.messageID, msgTime: t.timestamp, rangeIds, rangeN, namIds, namN });
-      } catch (e) { out.push({ name: g.conversationName, ok: false, note: e.message || "lỗi" }); }
+      } catch (e) { out.push({ name: g.conversationName, ok: false, note: phase + ": " + (e.message || "lỗi") }); }
       render(out);
       await new Promise((r) => setTimeout(r, 350)); // nghỉ giữa các nhóm cho đỡ lag Chrome
     }
