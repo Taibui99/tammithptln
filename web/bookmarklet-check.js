@@ -66,6 +66,7 @@
       if (!v) throw new Error("rỗng");
       if (v === TDD_VER) { say(`Đã ở bản mới nhất (v${TDD_VER}) ✓`); return; }
       say(`Có bản mới v${v} (đang v${TDD_VER}) — đang cập nhật, đợi chút…`);
+      try { sessionStorage.tdd_updated_from = TDD_VER; } catch (e) {}
       try { document.getElementById("tdiemdanh").remove(); } catch (e) {}
       window.__tdd_booted = false;
       const s = document.createElement("script");
@@ -438,5 +439,10 @@
     say("Đã đẩy xong lên Supabase ✓");
   };
   console.log("[tdd] panel sẵn sàng — tự quét ngay.");
+  try {
+    const uf = sessionStorage.tdd_updated_from;
+    if (uf && uf !== TDD_VER) say(`Đã cập nhật v${uf} → <b>v${TDD_VER}</b> ✓ — đang quét lại…`);
+    sessionStorage.removeItem("tdd_updated_from");
+  } catch (e) {}
   setTimeout(() => scan().catch((e) => say("Lỗi: " + (e.message || e) + " — thử tải lại trang rồi bấm lại.")), 600);
 })();
