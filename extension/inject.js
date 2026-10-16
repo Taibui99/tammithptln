@@ -1,17 +1,15 @@
 "use strict";
-// Content script: mỗi lần mở tammi.vn thì nạp BẢN MỚI NHẤT từ GitHub (CDN),
-// tải lỗi mới dùng bản kèm theo extension. Nhờ vậy update = git push,
-// máy thầy không cài lại, không bấm reload extension.
-// Tắt tự chạy: Console trang Tammi → localStorage.tdd_auto="0" → reload.
+// Content script: mặc định nạp BẢN MỚI NHẤT từ GitHub (CDN), rớt mạng mới dùng bản kèm theo.
+// Máy dev (có repo): Console trang Tammi gõ localStorage.tdd_src="bundled" 1 lần
+// → từ đó ăn code thẳng từ folder extension (git pull xong F5 là mới tức thì, khỏi chờ CDN).
+// Tắt tự chạy: localStorage.tdd_auto="0" → reload.
 (function () {
   try {
     if (localStorage.getItem("tdd_auto") === "0" || window.__tdd_booted) return;
     window.__tdd_booted = true;
-    console.log("[tdd] inject, lấy bản mới nhất từ GitHub…");
-    var done = false;
+    var bundled = false;
+    try { bundled = localStorage.getItem("tdd_src") === "bundled"; } catch (e) {}
     function useBundled(why) {
-      if (done) return;
-      done = true;
       console.log("[tdd] dùng bản kèm theo extension (" + why + ")");
       try {
         var f = document.createElement("script");
@@ -20,6 +18,9 @@
         (document.head || document.documentElement).appendChild(f);
       } catch (e) {}
     }
+    if (bundled) { useBundled("chế độ bundled"); return; }
+    console.log("[tdd] inject, lấy bản mới nhất từ GitHub…");
+    var done = false;
     var s = document.createElement("script");
     s.src = "https://cdn.jsdelivr.net/gh/Taibui99/tammithptln@main/extension/page.js";
     s.onload = function () { done = true; s.remove(); };
